@@ -1,0 +1,4 @@
+dx010/scripts/dx010_check_qsfp.sh usr/local/bin
+dx010/scripts/fancontrol /usr/sbin/
+dx010/cfg/dx010-modules.conf etc/modules-load.d
+dx010/cfg/fancontrol /etc/
