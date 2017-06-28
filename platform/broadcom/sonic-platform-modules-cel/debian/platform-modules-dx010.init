@@ -18,7 +18,6 @@ start)
         depmod -a
         modprobe i2c-dev
         modprobe i2c-mux-pca954x
-        modprobe cpld
         modprobe dx010_wdt
         modprobe leds-dx010
 
@@ -93,9 +92,6 @@ start)
                 echo "Can't find the cpld device!"
         exit 1
         fi
-
-        rm -f /dev/cpld
-        mknod -m 666 /dev/cpld c $major 0
 
         echo "done."
         ;;
