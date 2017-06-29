@@ -83,16 +83,6 @@ start)
         sleep 0.1
         done
 
-        /usr/sbin/fancontrol &
-
-        # Older Seastone module cut here
-        # /dev/cpld device node
-        major=`cat /proc/devices | awk '{if($2 == "cpld") print $1}'`
-        if [ "$major" == "" ]; then
-                echo "Can't find the cpld device!"
-        exit 1
-        fi
-
         echo "done."
         ;;
 
