@@ -1,0 +1,23 @@
+sonic-cel-platform-modules (0.4) unstable; urgency=low
+
+  * Add support for DX010's fancontrol, automatic run-up and FIX bug lpmod
+
+ -- Pariwat Leamsumran <pleamsum@celestica.com>  Thu, 14 June 2017 16:25:00 +0700
+
+sonic-cel-platform-modules (0.3) unstable; urgency=low
+
+  * Add support for DX010's DPS800
+
+ -- Abhisit Sangjan <asang@celestica.com>  Thu, 29 May 2017 19:23:00 +0700
+
+sonic-cel-platform-modules (0.2) unstable; urgency=low
+
+  * Add support for DX010's LM75B, Watchdog and EMC2305
+
+ -- Abhisit Sangjan <asang@celestica.com>  Thu, 25 May 2017 15:26:00 +0700
+
+sonic-cel-platform-modules (0.1) unstable; urgency=low
+
+  * Initial release
+
+ -- Abhisit Sangjan <asang@celestica.com>  Mon, 2 May 2017 14:47:00 +0700
