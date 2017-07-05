@@ -229,8 +229,17 @@ static struct platform_device cel_dx010_lpc_dev = {
         }
 };
 
-static __u16 i2c_read_eeprom(struct i2c_adapter *a, u16 addr,
-               struct dx010_i2c_data *new_data, u8 cmd){
+
+/**
+ * Read eeprom of QSFP device.
+ * @param  a        i2c adapter.
+ * @param  addr     address to read.
+ * @param  new_data QSFP port number struct.
+ * @param  cmd      i2c command.
+ * @return          0 if not error, else the error code.
+ */
+static int i2c_read_eeprom(struct i2c_adapter *a, u16 addr,
+               struct dx010_i2c_data *new_data, u8 cmd, union i2c_smbus_data *data){
 
         u32 reg;
         int ioBase=0;
@@ -239,7 +248,7 @@ static __u16 i2c_read_eeprom(struct i2c_adapter *a, u16 addr,
         short portid, opcode, devaddr, cmdbyte0, ssrr, writedata, readdata;
         __u16 word_data;
         char read_byte;
-        int error;
+        int error = -EIO;
 
         mutex_lock(&cpld_data->cpld_lock);
 
@@ -272,16 +281,18 @@ static __u16 i2c_read_eeprom(struct i2c_adapter *a, u16 addr,
                 writedata = WRITE_ID_BANK3;
                 readdata = READ_ID_BANK3;
         }else{
-                error = -1;
+            /* Invalid parameter! */
+                error = -EINVAL;
                 goto exit;
         }
 
         while ((inb(ioBase + ssrr) & 0x40));
         if ((inb(ioBase + ssrr) & 0x80) == 0x80) {
+                error = -EIO;
+                /* Read error reset the port */
                 outb(0x00, ioBase + ssrr);
                 udelay(3000);
                 outb(0x01, ioBase + ssrr);
-                error = -1;
                 goto exit;
         }
 
@@ -300,10 +311,11 @@ static __u16 i2c_read_eeprom(struct i2c_adapter *a, u16 addr,
         }
 
         if ((inb(ioBase + ssrr) & 0x80) == 0x80) {
+            /* Read error reset the port */
+                error = -EIO;
                 outb(0x00, ioBase + ssrr);
                 udelay(3000);
                 outb(0x01, ioBase + ssrr);
-                error = -ENODEV;
                 goto exit;
         }
 
@@ -314,23 +326,35 @@ static __u16 i2c_read_eeprom(struct i2c_adapter *a, u16 addr,
         word_data |= inb(temp);
 
         mutex_unlock(&cpld_data->cpld_lock);
-        return word_data;
+        data->word = word_data;
+        return 0;
 
 exit:
         mutex_unlock(&cpld_data->cpld_lock);
         return error;
 }
 
-static s32 dx010_i2c_access(struct i2c_adapter *a, u16 addr,
+static int dx010_i2c_access(struct i2c_adapter *a, u16 addr,
               unsigned short flags, char rw, u8 cmd,
               int size, union i2c_smbus_data *data)
 {
+
+//    dev_info(&a->dev, "%s was called with the "
+//             "following parameters:\n",
+//             __FUNCTION__);
+//    dev_info(&a->dev, "addr = %.4x\n", addr);
+//    dev_info(&a->dev, "flags = %.4x\n", flags);
+//    dev_info(&a->dev, "read_write = %s\n",
+//             rw == I2C_SMBUS_WRITE ?
+//             "write" : "read");
+//    dev_info(&a->dev, "command = %d\n",
+//             cmd);
+
         int error = 0;
 
         struct dx010_i2c_data *new_data;
 
         /* Write the command register */
-
         new_data = i2c_get_adapdata(a);
 
         /* Map the size to what the chip understands */
@@ -345,7 +369,12 @@ static s32 dx010_i2c_access(struct i2c_adapter *a, u16 addr,
                 size = HST_CNTL2_BYTE_DATA;
         break;
         case I2C_SMBUS_WORD_DATA:
-                size = HST_CNTL2_WORD_DATA;
+//            dev_info(&a->dev,
+//                         "size = I2C_SMBUS_WORD_DATA\n");
+//            if (rw == I2C_SMBUS_WRITE)
+//                dev_info(&a->dev,
+//                    "data = %.4x\n", data->word);
+            size = HST_CNTL2_WORD_DATA;
         break;
         case I2C_SMBUS_BLOCK_DATA:
                 size = HST_CNTL2_BLOCK;
@@ -356,22 +385,22 @@ static s32 dx010_i2c_access(struct i2c_adapter *a, u16 addr,
                 goto Done;
         }
 
-        switch (size) {
-        case HST_CNTL2_BYTE:
-        if (rw == I2C_SMBUS_WRITE)
-            /* Beware it uses DAT0 register and not CMD! */
-        break;
-        case HST_CNTL2_BYTE_DATA:
+        // switch (size) {
+        // case HST_CNTL2_BYTE:
+        // if (rw == I2C_SMBUS_WRITE)
+        //     /* Beware it uses DAT0 register and not CMD! */
+        // break;
+        // case HST_CNTL2_BYTE_DATA:
 
-        if (rw == I2C_SMBUS_WRITE)
-        break;
-        case HST_CNTL2_WORD_DATA:
-        if (rw == I2C_SMBUS_WRITE) {
-        }
-        break;
-        case HST_CNTL2_BLOCK:
-                goto Done;
-        }
+        // if (rw == I2C_SMBUS_WRITE)
+        // break;
+        // case HST_CNTL2_WORD_DATA:
+        // if (rw == I2C_SMBUS_WRITE) {
+        // }
+        // break;
+        // case HST_CNTL2_BLOCK:
+        //         goto Done;
+        // }
 
         switch (size) {
         case HST_CNTL2_BYTE:    /* Result put in SMBHSTDAT0 */
@@ -379,7 +408,11 @@ static s32 dx010_i2c_access(struct i2c_adapter *a, u16 addr,
         case HST_CNTL2_BYTE_DATA:
         break;
         case HST_CNTL2_WORD_DATA:
-                data->word = i2c_read_eeprom(a,addr,new_data,cmd);;
+                if( 0 == i2c_read_eeprom(a,addr,new_data,cmd,data)){
+                    error = 0;
+                }else{
+                    error = -EIO;
+                }
         break;
         }
 
